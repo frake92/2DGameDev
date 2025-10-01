@@ -6,6 +6,9 @@ TagManager:
   tags:
   - Image
   - apple
+  - newLevel
+  - Enemy
+  - AICollider
   layers:
   - Default
   - TransparentFX
