@@ -15,4 +15,9 @@ public class GameManager : MonoBehaviour
     {
         appleTexts.text = player.applesCount.ToString();
     }
+
+    void ToTheNextLevel()
+    {
+        
+    }
 }

@@ -1,16 +1,19 @@
+using System.Collections;
 using UnityEngine;
 
 public class Enemy : MonoBehaviour
 {
-    static int Damage = 10;
-    private float health = 100;
+    [SerializeField] private int damage = 10;
+    [SerializeField] private float health = 10f;
     private Rigidbody2D rb;
 
-    private float speed = 3f;
+    [SerializeField] private float speed = 2f;
+    [SerializeField] private float attackRange = 1f;
+    [SerializeField] private float attackCooldown = 3f;
 
-    private float distanceBetweenPlayer = 0;
+    private float distanceToPlayer = Mathf.Infinity;
 
-    private Vector2 direction;
+    private Vector2 direction = Vector2.right;
     public Player player;
 
     private bool canAttack = true;
@@ -18,46 +21,77 @@ public class Enemy : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        direction = Vector2.right;
         rb = GetComponent<Rigidbody2D>();
+        // try to auto-find the player if not assigned
+        if (player == null)
+        {
+            var pgo = GameObject.FindWithTag("Player");
+            if (pgo != null) player = pgo.GetComponent<Player>();
+        }
     }
 
     // Update is called once per frame
     void Update()
     {
-        distanceBetweenPlayer = transform.position - player.transform.position;
-        if (distanceBetweenPlayer < 1f)
-            Attack();
+        // basic patrol movement
+        EnemyMovement();
+
+        if (player != null)
+        {
+            distanceToPlayer = Vector2.Distance(transform.position, player.transform.position);
+            if (distanceToPlayer <= attackRange)
+            {
+                Attack();
+            }
+        }
     }
 
     public void EnemyMovement()
     {
         transform.position += (Vector3)direction * speed * Time.deltaTime;
+
+        // optional: flip sprite depending on movement direction
+        if (transform.localScale.x < 0 && direction.x > 0)
+            transform.localScale = new Vector3(1, transform.localScale.y, transform.localScale.z);
+        else if (transform.localScale.x > 0 && direction.x < 0)
+            transform.localScale = new Vector3(-1, transform.localScale.y, transform.localScale.z);
     }
 
+    // flip direction when hitting an object tagged as patrol endpoint
     void OnCollisionEnter2D(Collision2D collision)
     {
-        if (collision.gameObject.GetComponent<Collider2D>() != null
-        && collision.gameObject.CompareTag("AIColliders"))
+        if (collision.collider != null && collision.gameObject.CompareTag("AICollider"))
         {
             direction = -direction;
         }
     }
 
-    public void Attack()
+    void Attack()
     {
-        if (canAttack)
-        {
-            canAttack = false;
-            player.hp -= Damage;
+        if (!canAttack || player == null) return;
 
-        }
+        canAttack = false;
+        // use Player's TakeDamage method
+        player.TakeDamage(damage);
         StartCoroutine(WaitForAttack());
-        canAttack = true;
     }
+
     IEnumerator WaitForAttack()
     {
-        yield return new WaitForSeconds(3f);
+        yield return new WaitForSeconds(attackCooldown);
+        canAttack = true;
     }
-    
+
+    public void TakeDamage(int amount)
+    {
+        health -= amount;
+        if (health <= 0)
+            Destroy(gameObject);
+    }
+
+    void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, attackRange);
+    }
 }
